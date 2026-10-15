@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Color Rush",
+    "slug": "color-rush",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "colorrush",
+    "android": {
+      "package": "com.alphaprogaming24.colorrush",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "efeec03a-73ec-4ce8-a0a1-393c3a5b198c"
+      }
+    },
+    "owner": "alphaprogaming24"
+  }
+}

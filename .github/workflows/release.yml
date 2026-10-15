@@ -1,0 +1,74 @@
+name: Release Android to Google Play testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: Google Play testing track
+        required: true
+        default: internal
+        type: choice
+        options:
+          - internal
+          - closed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: google-play-testing-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Android App Bundle
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      build_id: ${{ steps.eas-build.outputs.build_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+      - id: eas-build
+        name: Start production Android build
+        run: |
+          build_json="$(eas build --platform android --profile production --non-interactive --no-wait --json)"
+          build_id="$(node -e 'const result = JSON.parse(process.argv[1]); console.log((Array.isArray(result) ? result[0] : result).id)' "$build_json")"
+          echo "build_id=$build_id" >> "$GITHUB_OUTPUT"
+
+  submit:
+    name: Submit to ${{ inputs.track }} testing
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      EAS_SUBMIT_PROFILE: ${{ inputs.track == 'internal' && 'internal' || 'closed' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Create temporary Google Play credentials file
+        run: |
+          umask 077
+          printf '%s' "$GOOGLE_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/google-play-service-account.json"
+          echo "GOOGLE_SERVICE_ACCOUNT_KEY_PATH=$RUNNER_TEMP/google-play-service-account.json" >> "$GITHUB_ENV"
+      - name: Submit the matching EAS build
+        run: eas submit --platform android --id "${{ needs.build.outputs.build_id }}" --profile "$EAS_SUBMIT_PROFILE" --non-interactive --no-wait
+      - name: Remove temporary Google Play credentials file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/google-play-service-account.json"
