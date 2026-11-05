@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import {
+  Animated,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ColorTile } from '@/src/components/ColorTile';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
@@ -15,6 +22,9 @@ import {
 } from '@/src/services/Persistence';
 
 type Screen = 'home' | 'game' | 'gameOver';
+
+const PRIVACY_POLICY_URL =
+  'https://praveendhakade.github.io/color-rush/privacy-policy.html';
 
 export default function Index() {
   const [engine] = useState(() => new GameEngine());
@@ -145,6 +155,13 @@ const Home = ({
       <Text style={styles.help}>
         Match the named color before time runs out.
       </Text>
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel="Privacy policy"
+        onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
+      >
+        <Text style={styles.privacyLink}>Privacy Policy</Text>
+      </Pressable>
     </View>
   </SafeAreaView>
 );
@@ -235,6 +252,12 @@ const styles = StyleSheet.create({
   best: { color: '#C4C1E0', fontSize: 18, fontWeight: '700', letterSpacing: 1 },
   bestNumber: { color: '#FDE047', fontSize: 26 },
   help: { color: '#9994BA', fontSize: 15, lineHeight: 22, textAlign: 'center' },
+  privacyLink: {
+    color: '#C4C1E0',
+    fontSize: 14,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
   game: { flex: 1, padding: 20 },
   stats: { flexDirection: 'row', justifyContent: 'space-between' },
   score: { color: '#FFFFFF', fontSize: 23, fontWeight: '900' },

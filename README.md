@@ -37,6 +37,14 @@ Use feature branches, open a PR, pass CI, merge to `develop`, test a preview bui
 
 See the [closed-test release checklist](docs/google-play-closed-test.md), [store asset checklist](docs/store-assets.md), and [privacy review draft](docs/privacy.md). `EXPO_TOKEN` and `GOOGLE_SERVICE_ACCOUNT_JSON` belong in GitHub Actions secrets, not `.env` or source control.
 
+## Privacy policy
+
+The public policy is hosted with GitHub Pages at
+`https://praveendhakade.github.io/color-rush/privacy-policy.html`. Push the
+policy to `main` and run the **Deploy privacy policy** workflow after enabling
+GitHub Pages for the repository. Keep the policy and Google Play Data safety
+answers accurate whenever app data practices change.
+
 ## Troubleshooting
 
 If npm reports an engine warning, use Node 22.13 or newer. If an EAS build fails, verify Expo project setup, Android credentials, and the target API in the generated build logs; do not print tokens or service account JSON in logs.
