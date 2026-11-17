@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Animated,
   Linking,
+  type LayoutChangeEvent,
   Pressable,
   StyleSheet,
   Text,
@@ -175,7 +176,28 @@ const Game = ({
   scoreScale: Animated.Value;
   onTap: (tileId: string) => void;
 }) => {
+  const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
   const target = state.targetColor ? COLOR_CONFIG[state.targetColor] : null;
+  const columns = Math.min(3, state.tiles.length);
+  const rows = Math.ceil(state.tiles.length / columns);
+  const tileSize =
+    gridSize.width > 0 && gridSize.height > 0
+      ? Math.floor(
+          Math.min(
+            136,
+            (gridSize.width - 12 * (columns - 1)) / columns,
+            (gridSize.height - 12 * (rows - 1)) / rows,
+          ),
+        )
+      : 96;
+  const updateGridSize = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setGridSize((current) =>
+      current.width === width && current.height === height
+        ? current
+        : { width, height },
+    );
+  };
   const progress =
     `${Math.max(0, Math.round((state.timeRemaining / 1500) * 100))}%` as `${number}%`;
   return (
@@ -204,9 +226,11 @@ const Game = ({
         <Text style={styles.a11yHint}>
           Choose the tile labeled {target?.label}.
         </Text>
-        <View style={styles.grid}>
+        <View onLayout={updateGridSize} style={styles.grid}>
           {state.tiles.map((tile) => (
-            <ColorTile key={tile.id} tile={tile} onPress={onTap} />
+            <View key={tile.id} style={{ width: tileSize, height: tileSize }}>
+              <ColorTile tile={tile} onPress={onTap} />
+            </View>
           ))}
         </View>
       </View>
@@ -289,8 +313,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    alignContent: 'flex-end',
     justifyContent: 'center',
     marginTop: 28,
+    paddingBottom: 8,
   },
   over: {
     color: '#FFFFFF',

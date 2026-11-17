@@ -37,7 +37,6 @@ const styles = StyleSheet.create({
     elevation: 4,
     flex: 1,
     justifyContent: 'center',
-    minHeight: 104,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.2,

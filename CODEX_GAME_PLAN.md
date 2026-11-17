@@ -2,7 +2,7 @@ PROJECT: COLOR RUSH
 
 OBJECTIVE
 
-Build a polished, addictive, portrait-mode Android mobile game called Color Rush.
+Build a polished, addictive, responsive Android mobile game called Color Rush.
 
 The game is a fast reaction game.
 
@@ -45,7 +45,7 @@ TARGET PLATFORM
 
 Android first.
 
-Portrait orientation.
+Support portrait and landscape orientations, including resizable large-screen windows.
 
 Target Android API 36 or newer because this is a new Google Play app.
 
@@ -284,7 +284,7 @@ Use:
 - rounded tiles
 - strong contrast
 - clean spacing
-- portrait layout
+- responsive layout across orientations and window sizes
 - colorful but controlled visual style
 
 Do not make it look like a default React Native demo.

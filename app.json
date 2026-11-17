@@ -3,16 +3,15 @@
     "name": "Color Rush",
     "slug": "color-rush",
     "version": "0.1.0",
-    "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "scheme": "colorrush",
     "android": {
       "package": "com.alphaprogaming24.colorrush",
-      "versionCode": 1,
-      "edgeToEdgeEnabled": true
+      "versionCode": 1
     },
     "plugins": [
       "expo-router",
+      "./plugins/withResizableActivity",
       [
         "expo-build-properties",
         {

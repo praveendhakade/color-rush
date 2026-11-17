@@ -1,6 +1,6 @@
 # Color Rush
 
-Color Rush is a portrait Android-first reaction game: tap the requested color before time runs out. V1 is offline-first and includes scores, combos, level progression, local best-score persistence, restart, and accessible labeled tiles.
+Color Rush is an Android-first reaction game: tap the requested color before time runs out. V1 is offline-first and includes scores, combos, level progression, local best-score persistence, restart, and accessible labeled tiles. The interface supports rotation and resizable large-screen windows.
 
 ## Requirements
 
@@ -18,7 +18,7 @@ Use `npm run lint`, `npm run typecheck`, and `npm test` before opening a pull re
 
 ## Android and EAS
 
-The Android package identifier is configured once in `app.json` as `com.example.colorrush`; update it there when a final identifier is available. Portrait orientation and Android API 36 are explicitly configured there. Confirm the generated build configuration before a release.
+The Android package identifier is configured once in `app.json`; update it there when a final identifier is available. Android API 36 is explicitly configured. Expo SDK 57 applies edge-to-edge by default, and the Android activity is generated as resizable. Confirm the generated build configuration before a release.
 
 ```sh
 npx eas-cli build --platform android --profile preview
