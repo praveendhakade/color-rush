@@ -2,7 +2,12 @@ import { GAME_CONFIG } from './config';
 import { ColorGenerator } from './ColorGenerator';
 import { DifficultyManager } from './DifficultyManager';
 import { ScoreManager } from './ScoreManager';
-import type { Difficulty, GameResult, GameState } from './types';
+import type {
+  Difficulty,
+  DifficultyMode,
+  GameResult,
+  GameState,
+} from './types';
 
 export interface TapResult {
   state: GameState;
@@ -12,18 +17,31 @@ export interface TapResult {
 
 export class GameEngine {
   private state: GameState;
+  private difficulty: DifficultyManager;
+  private mode: DifficultyMode = 'medium';
 
   constructor(
     private readonly colors = new ColorGenerator(),
-    private readonly difficulty = new DifficultyManager(),
+    difficulty = new DifficultyManager(),
     private readonly scores = new ScoreManager(),
     bestScore = GAME_CONFIG.startingBestScore,
+    mode: DifficultyMode = 'medium',
   ) {
+    this.mode = mode;
+    this.difficulty =
+      mode === 'medium' ? difficulty : new DifficultyManager(undefined, mode);
     this.state = this.createIdleState(bestScore);
   }
 
   getState(): GameState {
     return { ...this.state, tiles: [...this.state.tiles] };
+  }
+
+  setDifficultyMode(mode: DifficultyMode): GameState {
+    this.mode = mode;
+    this.difficulty = new DifficultyManager(undefined, mode);
+    this.state = { ...this.state, level: GAME_CONFIG.initialLevel };
+    return this.getState();
   }
 
   setBestScore(bestScore: number): GameState {
@@ -103,6 +121,23 @@ export class GameEngine {
   setTimeRemaining(timeRemaining: number): GameState {
     if (this.state.status === 'playing')
       this.state = { ...this.state, timeRemaining: Math.max(0, timeRemaining) };
+    return this.getState();
+  }
+
+  pauseGame(timeRemaining: number): GameState {
+    if (this.state.status === 'playing') {
+      this.state = {
+        ...this.state,
+        status: 'paused',
+        timeRemaining: Math.max(0, timeRemaining),
+      };
+    }
+    return this.getState();
+  }
+
+  resumeGame(): GameState {
+    if (this.state.status === 'paused')
+      this.state = { ...this.state, status: 'playing' };
     return this.getState();
   }
 

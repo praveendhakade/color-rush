@@ -10,6 +10,7 @@ export const COLOR_IDS = [
 export type ColorId = (typeof COLOR_IDS)[number];
 export type GameStatus =
   'idle' | 'countdown' | 'playing' | 'paused' | 'gameOver';
+export type DifficultyMode = 'easy' | 'medium' | 'hard';
 
 export interface Tile {
   id: string;

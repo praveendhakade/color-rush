@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { DifficultyMode } from '../game/types';
 
 const STORAGE_KEY = '@color-rush/preferences-v1';
 
@@ -8,6 +9,7 @@ export interface StoredGameData {
   highestCombo: number;
   soundEnabled: boolean;
   hapticsEnabled: boolean;
+  difficultyMode: DifficultyMode;
 }
 
 export const DEFAULT_STORED_DATA: StoredGameData = {
@@ -16,6 +18,7 @@ export const DEFAULT_STORED_DATA: StoredGameData = {
   highestCombo: 0,
   soundEnabled: true,
   hapticsEnabled: true,
+  difficultyMode: 'medium',
 };
 
 export const gameStorage = {

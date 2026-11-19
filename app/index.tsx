@@ -1,19 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Animated,
-  Linking,
-  type LayoutChangeEvent,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ColorTile } from '@/src/components/ColorTile';
-import { PrimaryButton } from '@/src/components/PrimaryButton';
-import { COLOR_CONFIG } from '@/src/game/config';
+import { Animated } from 'react-native';
+import { GameOverScreen } from '@/src/screens/GameOverScreen';
+import { GameplayScreen } from '@/src/screens/GameplayScreen';
+import { HomeScreen } from '@/src/screens/HomeScreen';
+import { SettingsScreen } from '@/src/screens/SettingsScreen';
 import { GameEngine } from '@/src/game/GameEngine';
-import type { GameResult, GameState } from '@/src/game/types';
+import type { DifficultyMode, GameResult, GameState } from '@/src/game/types';
 import { useGameTimer } from '@/src/hooks/useGameTimer';
 import { feedback } from '@/src/services/Feedback';
 import {
@@ -22,10 +14,7 @@ import {
   type StoredGameData,
 } from '@/src/services/Persistence';
 
-type Screen = 'home' | 'game' | 'gameOver';
-
-const PRIVACY_POLICY_URL =
-  'https://praveendhakade.github.io/color-rush/privacy-policy.html';
+type Screen = 'home' | 'settings' | 'game' | 'gameOver';
 
 export default function Index() {
   const [engine] = useState(() => new GameEngine());
@@ -33,14 +22,37 @@ export default function Index() {
   const [state, setState] = useState<GameState>(() => engine.getState());
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
   const [stored, setStored] = useState<StoredGameData>(DEFAULT_STORED_DATA);
+  const [difficultyMode, setDifficultyMode] =
+    useState<DifficultyMode>('medium');
   const [scoreScale] = useState(() => new Animated.Value(1));
 
   useEffect(() => {
     gameStorage.load().then((data) => {
       setStored(data);
+      setDifficultyMode(data.difficultyMode);
+      feedback.setSoundEnabled(data.soundEnabled);
+      engine.setDifficultyMode(data.difficultyMode);
       setState(engine.setBestScore(data.bestScore));
     });
   }, [engine]);
+
+  const chooseDifficulty = useCallback(
+    (mode: DifficultyMode) => {
+      setDifficultyMode(mode);
+      setState(engine.setDifficultyMode(mode));
+      const next = { ...stored, difficultyMode: mode };
+      setStored(next);
+      void gameStorage.save(next);
+    },
+    [engine, stored],
+  );
+
+  const toggleSound = useCallback(() => {
+    const next = { ...stored, soundEnabled: !stored.soundEnabled };
+    setStored(next);
+    feedback.setSoundEnabled(next.soundEnabled);
+    void gameStorage.save(next);
+  }, [stored]);
 
   const persistResult = useCallback(
     (result: GameState) => {
@@ -66,9 +78,12 @@ export default function Index() {
     setScreen('gameOver');
   }, [engine, persistResult]);
 
-  const { start: startTimer, stop: stopTimer } = useGameTimer(
-    finishGame,
-    (milliseconds) => setState(engine.setTimeRemaining(milliseconds)),
+  const {
+    start: startTimer,
+    stop: stopTimer,
+    pause: pauseTimer,
+  } = useGameTimer(finishGame, (milliseconds) =>
+    setState(engine.setTimeRemaining(milliseconds)),
   );
 
   const startGame = useCallback(() => {
@@ -79,6 +94,17 @@ export default function Index() {
     setScreen('game');
     startTimer(next.timeRemaining);
   }, [engine, startTimer, stopTimer]);
+
+  const pauseGame = useCallback(() => {
+    const remaining = pauseTimer();
+    setState(engine.pauseGame(remaining));
+  }, [engine, pauseTimer]);
+
+  const resumeGame = useCallback(() => {
+    const next = engine.resumeGame();
+    setState(next);
+    startTimer(next.timeRemaining);
+  }, [engine, startTimer]);
 
   const tapTile = useCallback(
     (tileId: string) => {
@@ -122,212 +148,40 @@ export default function Index() {
 
   if (screen === 'home')
     return (
-      <Home
+      <HomeScreen
         bestScore={Math.max(stored.bestScore, state.bestScore)}
+        onSettings={() => setScreen('settings')}
         onPlay={startGame}
+      />
+    );
+  if (screen === 'settings')
+    return (
+      <SettingsScreen
+        difficultyMode={difficultyMode}
+        soundEnabled={stored.soundEnabled}
+        onChooseDifficulty={chooseDifficulty}
+        onToggleSound={toggleSound}
+        onBack={() => setScreen('home')}
       />
     );
   if (screen === 'gameOver')
     return (
-      <GameOver
+      <GameOverScreen
         state={state}
         result={gameResult}
         onReplay={startGame}
         onHome={goHome}
       />
     );
-  return <Game state={state} scoreScale={scoreScale} onTap={tapTile} />;
-}
-
-const Home = ({
-  bestScore,
-  onPlay,
-}: {
-  bestScore: number;
-  onPlay: () => void;
-}) => (
-  <SafeAreaView style={styles.page}>
-    <View style={styles.home}>
-      <Text style={styles.brand}>COLOR{`\n`}RUSH</Text>
-      <Text style={styles.best}>
-        BEST SCORE <Text style={styles.bestNumber}>{bestScore}</Text>
-      </Text>
-      <PrimaryButton label="PLAY" testID="play-button" onPress={onPlay} />
-      <Text style={styles.help}>
-        Match the named color before time runs out.
-      </Text>
-      <Pressable
-        accessibilityRole="link"
-        accessibilityLabel="Privacy policy"
-        onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
-      >
-        <Text style={styles.privacyLink}>Privacy Policy</Text>
-      </Pressable>
-    </View>
-  </SafeAreaView>
-);
-
-const Game = ({
-  state,
-  scoreScale,
-  onTap,
-}: {
-  state: GameState;
-  scoreScale: Animated.Value;
-  onTap: (tileId: string) => void;
-}) => {
-  const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
-  const target = state.targetColor ? COLOR_CONFIG[state.targetColor] : null;
-  const columns = Math.min(3, state.tiles.length);
-  const rows = Math.ceil(state.tiles.length / columns);
-  const tileSize =
-    gridSize.width > 0 && gridSize.height > 0
-      ? Math.floor(
-          Math.min(
-            136,
-            (gridSize.width - 12 * (columns - 1)) / columns,
-            (gridSize.height - 12 * (rows - 1)) / rows,
-          ),
-        )
-      : 96;
-  const updateGridSize = (event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    setGridSize((current) =>
-      current.width === width && current.height === height
-        ? current
-        : { width, height },
-    );
-  };
-  const progress =
-    `${Math.max(0, Math.round((state.timeRemaining / 1500) * 100))}%` as `${number}%`;
   return (
-    <SafeAreaView style={styles.page}>
-      <View style={styles.game}>
-        <View style={styles.stats}>
-          <Animated.Text
-            style={[styles.score, { transform: [{ scale: scoreScale }] }]}
-          >
-            SCORE {state.score}
-          </Animated.Text>
-          <Text style={styles.level}>LEVEL {state.level}</Text>
-        </View>
-        {state.combo > 0 && (
-          <Text style={styles.combo}>COMBO x{state.combo}</Text>
-        )}
-        <View
-          accessibilityLabel={`Time remaining ${state.timeRemaining} milliseconds`}
-          style={styles.timerTrack}
-        >
-          <View style={[styles.timerFill, { width: progress }]} />
-        </View>
-        <Text style={styles.instruction}>
-          TAP <Text style={{ color: target?.hex }}>{target?.label}</Text>
-        </Text>
-        <Text style={styles.a11yHint}>
-          Choose the tile labeled {target?.label}.
-        </Text>
-        <View onLayout={updateGridSize} style={styles.grid}>
-          {state.tiles.map((tile) => (
-            <View key={tile.id} style={{ width: tileSize, height: tileSize }}>
-              <ColorTile tile={tile} onPress={onTap} />
-            </View>
-          ))}
-        </View>
-      </View>
-    </SafeAreaView>
+    <GameplayScreen
+      state={state}
+      difficultyMode={difficultyMode}
+      scoreScale={scoreScale}
+      onTap={tapTile}
+      onPause={pauseGame}
+      onResume={resumeGame}
+      onHome={goHome}
+    />
   );
-};
-
-const GameOver = ({
-  state,
-  result,
-  onReplay,
-  onHome,
-}: {
-  state: GameState;
-  result: GameResult | null;
-  onReplay: () => void;
-  onHome: () => void;
-}) => (
-  <SafeAreaView style={styles.page}>
-    <View style={styles.home}>
-      <Text style={styles.over}>GAME OVER</Text>
-      <Text style={styles.finalScore}>{state.score}</Text>
-      <Text style={styles.best}>
-        BEST <Text style={styles.bestNumber}>{state.bestScore}</Text>
-      </Text>
-      <Text style={styles.combo}>COMBO x{result?.combo ?? 0}</Text>
-      <PrimaryButton label="PLAY AGAIN" onPress={onReplay} />
-      <PrimaryButton label="HOME" onPress={onHome} />
-    </View>
-  </SafeAreaView>
-);
-
-const styles = StyleSheet.create({
-  page: { backgroundColor: '#17142E', flex: 1 },
-  home: { flex: 1, gap: 22, justifyContent: 'center', padding: 28 },
-  brand: {
-    color: '#FFFFFF',
-    fontSize: 54,
-    fontWeight: '900',
-    letterSpacing: 2,
-    lineHeight: 51,
-  },
-  best: { color: '#C4C1E0', fontSize: 18, fontWeight: '700', letterSpacing: 1 },
-  bestNumber: { color: '#FDE047', fontSize: 26 },
-  help: { color: '#9994BA', fontSize: 15, lineHeight: 22, textAlign: 'center' },
-  privacyLink: {
-    color: '#C4C1E0',
-    fontSize: 14,
-    textAlign: 'center',
-    textDecorationLine: 'underline',
-  },
-  game: { flex: 1, padding: 20 },
-  stats: { flexDirection: 'row', justifyContent: 'space-between' },
-  score: { color: '#FFFFFF', fontSize: 23, fontWeight: '900' },
-  level: { color: '#C4C1E0', fontSize: 17, fontWeight: '800' },
-  combo: { color: '#FDE047', fontSize: 17, fontWeight: '900', marginTop: 10 },
-  timerTrack: {
-    backgroundColor: '#353052',
-    borderRadius: 6,
-    height: 9,
-    marginTop: 15,
-    overflow: 'hidden',
-  },
-  timerFill: { backgroundColor: '#FDE047', height: '100%' },
-  instruction: {
-    color: '#FFFFFF',
-    fontSize: 31,
-    fontWeight: '900',
-    marginTop: 36,
-    textAlign: 'center',
-  },
-  a11yHint: {
-    color: '#AAA6C8',
-    fontSize: 14,
-    marginTop: 7,
-    textAlign: 'center',
-  },
-  grid: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    alignContent: 'flex-end',
-    justifyContent: 'center',
-    marginTop: 28,
-    paddingBottom: 8,
-  },
-  over: {
-    color: '#FFFFFF',
-    fontSize: 40,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
-  finalScore: {
-    color: '#FDE047',
-    fontSize: 76,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
-});
+}

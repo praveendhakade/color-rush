@@ -37,6 +37,13 @@ export const useGameTimer = (
     [stop],
   );
 
+  const pause = useCallback(() => {
+    const remaining = Math.max(0, expiresAt.current - Date.now());
+    stop();
+    tickCallback.current(remaining);
+    return remaining;
+  }, [stop]);
+
   useEffect(() => {
     const subscription = AppState.addEventListener(
       'change',
@@ -51,5 +58,5 @@ export const useGameTimer = (
     };
   }, [stop]);
 
-  return { start, stop };
+  return { start, stop, pause };
 };

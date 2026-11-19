@@ -2,12 +2,12 @@
   "expo": {
     "name": "Color Rush",
     "slug": "color-rush",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "userInterfaceStyle": "dark",
     "scheme": "colorrush",
     "android": {
       "package": "com.alphaprogaming24.colorrush",
-      "versionCode": 1
+      "versionCode": 2
     },
     "plugins": [
       "expo-router",
@@ -17,10 +17,13 @@
         {
           "android": {
             "compileSdkVersion": 36,
-            "targetSdkVersion": 36
+            "targetSdkVersion": 36,
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
           }
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true

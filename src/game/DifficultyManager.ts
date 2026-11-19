@@ -1,4 +1,4 @@
-import type { Difficulty } from './types';
+import type { Difficulty, DifficultyMode } from './types';
 
 const DEFAULT_DIFFICULTIES: Difficulty[] = [
   {
@@ -48,13 +48,38 @@ const DEFAULT_DIFFICULTIES: Difficulty[] = [
 export class DifficultyManager {
   constructor(
     private readonly difficulties: readonly Difficulty[] = DEFAULT_DIFFICULTIES,
+    private readonly mode: DifficultyMode = 'medium',
   ) {}
 
   forLevel(level: number): Difficulty {
     const normalizedLevel = Math.max(1, Math.floor(level));
-    return this.difficulties.reduce((current, candidate) =>
+    const selected = this.difficulties.reduce((current, candidate) =>
       candidate.level <= normalizedLevel ? candidate : current,
     );
+    const scale = this.mode === 'easy' ? 1.35 : this.mode === 'hard' ? 0.72 : 1;
+    return {
+      ...selected,
+      tileCount: Math.max(
+        2,
+        Math.round(
+          selected.tileCount *
+            (this.mode === 'easy' ? 0.75 : this.mode === 'hard' ? 1.25 : 1),
+        ),
+      ),
+      colorCount:
+        this.mode === 'easy'
+          ? Math.max(2, selected.colorCount - 1)
+          : selected.colorCount,
+      responseTimeMs: Math.round(selected.responseTimeMs * scale),
+      decoyFrequency: Math.max(
+        0,
+        Math.min(
+          0.8,
+          selected.decoyFrequency *
+            (this.mode === 'easy' ? 0.7 : this.mode === 'hard' ? 1.2 : 1),
+        ),
+      ),
+    };
   }
 
   levelForScore(score: number): number {
