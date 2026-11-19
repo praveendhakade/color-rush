@@ -46,7 +46,13 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textAlign: 'center',
   },
-  best: { color: '#C4C1E0', fontSize: 18, fontWeight: '700', letterSpacing: 1, textAlign: 'center' },
+  best: {
+    color: '#C4C1E0',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textAlign: 'center',
+  },
   bestNumber: { color: '#FDE047', fontSize: 26 },
   levelReached: {
     color: '#C4C1E0',

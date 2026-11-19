@@ -10,5 +10,21 @@ module.exports = (config) =>
     }
 
     mainActivity.$['android:resizeableActivity'] = 'true';
+
+  const features = configWithManifest.modResults.manifest['uses-feature'] ?? [];
+  const microphoneFeature = features.find(
+    (feature) => feature.$['android:name'] === 'android.hardware.microphone',
+  );
+  if (microphoneFeature) {
+    microphoneFeature.$['android:required'] = 'false';
+  } else {
+    features.push({
+      $: {
+        'android:name': 'android.hardware.microphone',
+        'android:required': 'false',
+      },
+    });
+  }
+  configWithManifest.modResults.manifest['uses-feature'] = features;
     return configWithManifest;
   });

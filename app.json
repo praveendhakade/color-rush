@@ -7,7 +7,8 @@
     "scheme": "colorrush",
     "android": {
       "package": "com.alphaprogaming24.colorrush",
-      "versionCode": 2
+      "versionCode": 2,
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"]
     },
     "plugins": [
       "expo-router",
@@ -23,7 +24,10 @@
           }
         }
       ],
-      "expo-audio"
+      [
+        "expo-audio",
+        { "recordAudioAndroid": false, "microphonePermission": false }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
