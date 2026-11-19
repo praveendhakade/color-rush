@@ -15,6 +15,17 @@ describe('DifficultyManager', () => {
     expect(manager.levelForScore(500)).toBe(2);
   });
 
+  it('scales each level for easy and hard modes', () => {
+    const easy = new DifficultyManager(undefined, 'easy').forLevel(1);
+    const medium = new DifficultyManager(undefined, 'medium').forLevel(1);
+    const hard = new DifficultyManager(undefined, 'hard').forLevel(1);
+
+    expect(easy.responseTimeMs).toBeGreaterThan(medium.responseTimeMs);
+    expect(easy.tileCount).toBeLessThan(medium.tileCount);
+    expect(hard.responseTimeMs).toBeLessThan(medium.responseTimeMs);
+    expect(hard.tileCount).toBeGreaterThan(medium.tileCount);
+  });
+
   it('accepts configurable difficulty bands', () => {
     const manager = new DifficultyManager([
       {
