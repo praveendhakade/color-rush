@@ -17,6 +17,12 @@ export const GAME_CONFIG: GameConfig = {
   initialLevel: 1,
 };
 
+export const LIVES_CONFIG = {
+  initialLives: 3,
+  reviveLives: 1,
+  maxRevivesPerGame: 1,
+} as const;
+
 export const SCORE_CONFIG = {
   baseScore: 100,
   maxSpeedBonus: 100,

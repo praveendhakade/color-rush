@@ -8,6 +8,7 @@
     "android": {
       "package": "com.alphaprogaming24.colorrush",
       "versionCode": 2,
+      "permissions": ["android.permission.VIBRATE"],
       "blockedPermissions": ["android.permission.RECORD_AUDIO"]
     },
     "plugins": [

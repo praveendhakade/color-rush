@@ -4,17 +4,24 @@ export const PrimaryButton = ({
   label,
   onPress,
   testID,
+  disabled = false,
 }: {
   label: string;
   onPress: () => void;
   testID?: string;
+  disabled?: boolean;
 }) => (
   <Pressable
     accessibilityRole="button"
     accessibilityLabel={label}
     testID={testID}
+    disabled={disabled}
     onPress={onPress}
-    style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+    style={({ pressed }) => [
+      styles.button,
+      disabled && styles.disabled,
+      pressed && styles.pressed,
+    ]}
   >
     <Text style={styles.label}>{label}</Text>
   </Pressable>
@@ -36,4 +43,5 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
+  disabled: { opacity: 0.55 },
 });
