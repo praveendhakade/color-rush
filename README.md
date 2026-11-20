@@ -1,6 +1,6 @@
 # Color Rush
 
-Color Rush is an Android-first reaction game: tap the requested color before time runs out. V1 is offline-first and includes scores, combos, level progression, local best-score persistence, restart, and accessible labeled tiles. The interface supports rotation and resizable large-screen windows.
+Color Rush is an Android-first reaction game: tap the requested color before time runs out. The game includes three lives per run, score and combo progression, a one-time rewarded-revive offer, local best-score persistence, restart, and accessible labeled tiles. The interface supports rotation and resizable large-screen windows.
 
 ## Requirements
 
@@ -14,7 +14,7 @@ npm start
 npm run android
 ```
 
-Use `npm run lint`, `npm run typecheck`, and `npm test` before opening a pull request.
+Use `npm run lint`, `npm run typecheck`, and `npm test` before opening a pull request. CI resolves the Expo public configuration and bundles the Android JavaScript app locally for build validation without starting a cloud EAS build.
 
 ## Android and EAS
 
@@ -31,9 +31,15 @@ npx eas-cli submit --platform android --profile closed
 
 ## GitHub Actions and release process
 
-CI runs lint, typecheck, and tests on pull requests and pushes to `main` or `develop`. Preview builds are manual. The release workflow is also manual, uses the protected `production` environment, and requires an explicit `internal` or `closed` track selection.
+Use `dev` for active development and integration, and `main` for stable production-ready code. Create feature branches from `dev` and merge them back through PRs. When a change is ready for production, open a PR from `dev` to `main`.
 
-Use feature branches, open a PR, pass CI, merge to `develop`, test a preview build on a real Android device, then bump the semantic version and create a release tag before triggering a production internal-test release. For new personal Play developer accounts, complete the currently required closed test cohort and duration before requesting production access.
+CI runs lint, typecheck, unit tests, and Expo configuration validation on every push to `dev`, every PR targeting `main`, and every push to `main`. Obsolete CI runs for the same branch or PR are cancelled. Preview builds remain manual. The release workflow is also manual, uses the protected `production` environment, and requires an explicit `internal` or `closed` track selection; merging to `main` never submits to Google Play.
+
+Each new run starts with three lives. Wrong selections and timeouts consume one life, reset the combo, and preserve score and level. At zero lives the player can end the run or use the single revive. `RewardedAdService` defines the future ad boundary; actual AdMob integration is deferred until its production SDK, consent, and privacy requirements are reviewed. Development builds simulate a verified reward for flow testing; production builds report ads unavailable and never grant a life.
+
+Use feature branches from `dev`, open a PR, pass CI, merge to `dev`, and test a preview build on a real Android device. When ready, PR `dev` into `main`. Bump the semantic version and trigger a production internal-test release manually. For new personal Play developer accounts, complete the currently required closed test cohort and duration before requesting production access.
+
+See [game architecture](docs/game-architecture.md) for the lives, timer, and rewarded-ad flow.
 
 See the [closed-test release checklist](docs/google-play-closed-test.md), [store asset checklist](docs/store-assets.md), and [privacy review draft](docs/privacy.md). `EXPO_TOKEN` and `GOOGLE_SERVICE_ACCOUNT_JSON` belong in GitHub Actions secrets, not `.env` or source control.
 

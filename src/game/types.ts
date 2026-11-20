@@ -9,7 +9,7 @@ export const COLOR_IDS = [
 
 export type ColorId = (typeof COLOR_IDS)[number];
 export type GameStatus =
-  'idle' | 'countdown' | 'playing' | 'paused' | 'gameOver';
+  'idle' | 'countdown' | 'playing' | 'paused' | 'reviveOffer' | 'gameOver';
 export type DifficultyMode = 'easy' | 'medium' | 'hard';
 
 export interface Tile {
@@ -41,6 +41,8 @@ export interface GameState {
   timeRemaining: number;
   gamesPlayed: number;
   highestCombo: number;
+  lives: number;
+  revivesUsed: number;
 }
 
 export interface GameResult {

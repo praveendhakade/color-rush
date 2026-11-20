@@ -6,14 +6,18 @@ import type { DifficultyMode } from '@/src/game/types';
 export const SettingsScreen = ({
   difficultyMode,
   soundEnabled,
+  hapticsEnabled,
   onChooseDifficulty,
   onToggleSound,
+  onToggleHaptics,
   onBack,
 }: {
   difficultyMode: DifficultyMode;
   soundEnabled: boolean;
+  hapticsEnabled: boolean;
   onChooseDifficulty: (mode: DifficultyMode) => void;
   onToggleSound: () => void;
+  onToggleHaptics: () => void;
   onBack: () => void;
 }) => (
   <SafeAreaView style={styles.page}>
@@ -42,6 +46,7 @@ export const SettingsScreen = ({
       </View>
       <Text style={styles.settingLabel}>SOUND</Text>
       <Pressable
+        accessibilityLabel="SOUND"
         accessibilityRole="switch"
         accessibilityState={{ checked: soundEnabled }}
         onPress={onToggleSound}
@@ -49,6 +54,20 @@ export const SettingsScreen = ({
       >
         <Text style={[styles.choiceText, soundEnabled && styles.selectedText]}>
           {soundEnabled ? 'ON' : 'OFF'}
+        </Text>
+      </Pressable>
+      <Text style={styles.settingLabel}>HAPTICS</Text>
+      <Pressable
+        accessibilityLabel="HAPTICS"
+        accessibilityRole="switch"
+        accessibilityState={{ checked: hapticsEnabled }}
+        onPress={onToggleHaptics}
+        style={[styles.soundToggle, hapticsEnabled && styles.selected]}
+      >
+        <Text
+          style={[styles.choiceText, hapticsEnabled && styles.selectedText]}
+        >
+          {hapticsEnabled ? 'ON' : 'OFF'}
         </Text>
       </Pressable>
       <PrimaryButton label="BACK" onPress={onBack} />

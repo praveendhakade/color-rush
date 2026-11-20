@@ -29,27 +29,96 @@ describe('GameEngine', () => {
     expect(result.correct).toBe(true);
     expect(result.state.score).toBeGreaterThan(0);
     expect(result.state.combo).toBe(1);
+    expect(result.state.lives).toBe(3);
   });
 
-  it('rejects invalid taps and ends the game', () => {
+  it('starts each game with three lives and rejects stale tile callbacks', () => {
     const engine = createEngine();
-    engine.startGame();
-    const result = engine.handleTap('not-a-tile');
-    expect(result.correct).toBe(false);
-    expect(result.state.status).toBe('gameOver');
-    expect(result.state.combo).toBe(0);
+    expect(engine.startGame().lives).toBe(3);
+    const before = engine.getState();
+    const wrong = before.tiles.find(
+      (tile) => tile.color !== before.targetColor,
+    )!;
+    const first = engine.handleTap(wrong.id);
+    expect(first.state.lives).toBe(2);
+    expect(first.state.status).toBe('playing');
+    expect(engine.handleTap(wrong.id).state.lives).toBe(2);
   });
 
-  it('preserves the completed combo in a game result while resetting game state', () => {
+  it('opens the revive offer after three mistakes and resets combo', () => {
     const engine = createEngine();
     const state = engine.startGame();
     const correctTile = state.tiles.find(
       (tile) => tile.color === state.targetColor,
     )!;
     engine.handleTap(correctTile.id, state.timeRemaining);
+    expect(engine.handleWrongAnswer().state.status).toBe('playing');
+    expect(engine.handleWrongAnswer().state.status).toBe('playing');
     const result = engine.handleWrongAnswer();
+    expect(result.state.status).toBe('reviveOffer');
+    expect(result.state.lives).toBe(0);
     expect(result.state.combo).toBe(0);
-    expect(result.result).toMatchObject({ combo: 1, highestCombo: 1 });
+    expect(result.state.highestCombo).toBe(1);
+  });
+
+  it('freezes round time while the revive offer is active', () => {
+    const engine = createEngine();
+    engine.startGame();
+    engine.handleWrongAnswer();
+    engine.handleWrongAnswer();
+    const offer = engine.handleWrongAnswer().state;
+    expect(engine.setTimeRemaining(0)).toMatchObject({
+      status: 'reviveOffer',
+      timeRemaining: offer.timeRemaining,
+    });
+    expect(engine.grantRevive().timeRemaining).toBeGreaterThan(0);
+  });
+
+  it('revives once after a verified reward and preserves score and level', () => {
+    const engine = createEngine();
+    let state = engine.startGame();
+    const right = state.tiles.find((tile) => tile.color === state.targetColor)!;
+    state = engine.handleTap(right.id, state.timeRemaining).state;
+    const score = state.score;
+    const level = state.level;
+    const gamesPlayed = state.gamesPlayed;
+    engine.handleWrongAnswer();
+    engine.handleWrongAnswer();
+    engine.handleWrongAnswer();
+    state = engine.grantRevive();
+    expect(state).toMatchObject({
+      status: 'playing',
+      lives: 1,
+      revivesUsed: 1,
+      score,
+      level,
+      gamesPlayed,
+    });
+    expect(engine.grantRevive()).toMatchObject({ lives: 1, revivesUsed: 1 });
+    engine.handleWrongAnswer();
+    expect(engine.handleWrongAnswer().state.status).toBe('gameOver');
+  });
+
+  it('does not grant a revive unless an offer is active and resets session lives', () => {
+    const engine = createEngine();
+    expect(engine.grantRevive().lives).toBe(3);
+    engine.startGame();
+    engine.handleWrongAnswer();
+    engine.handleWrongAnswer();
+    engine.handleWrongAnswer();
+    expect(engine.startGame()).toMatchObject({ lives: 3, revivesUsed: 0 });
+  });
+
+  it('preserves score and level on a lost life and returns a final score', () => {
+    const engine = createEngine();
+    let state = engine.startGame();
+    const right = state.tiles.find((tile) => tile.color === state.targetColor)!;
+    state = engine.handleTap(right.id, state.timeRemaining).state;
+    const { score, level } = state;
+    state = engine.handleWrongAnswer().state;
+    expect(state).toMatchObject({ score, level, lives: 2, combo: 0 });
+    engine.endGame();
+    expect(engine.getResult()).toMatchObject({ score, bestScore: score });
   });
 
   it('updates the high score when a game ends', () => {

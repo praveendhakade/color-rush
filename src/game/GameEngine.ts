@@ -1,4 +1,4 @@
-import { GAME_CONFIG } from './config';
+import { GAME_CONFIG, LIVES_CONFIG } from './config';
 import { ColorGenerator } from './ColorGenerator';
 import { DifficultyManager } from './DifficultyManager';
 import { ScoreManager } from './ScoreManager';
@@ -17,6 +17,7 @@ export interface TapResult {
 
 export class GameEngine {
   private state: GameState;
+  private roundAnswered = false;
   private difficulty: DifficultyManager;
   private mode: DifficultyMode = 'medium';
 
@@ -65,19 +66,21 @@ export class GameEngine {
     tileId: string,
     timeRemaining = this.state.timeRemaining,
   ): TapResult {
-    if (this.state.status !== 'playing')
+    if (this.state.status !== 'playing' || this.roundAnswered)
       return { state: this.getState(), correct: false };
     const tile = this.state.tiles.find((item) => item.id === tileId);
-    if (!tile || tile.color !== this.state.targetColor) {
+    if (!tile) return { state: this.getState(), correct: false };
+    if (tile.color !== this.state.targetColor) {
       return this.handleWrongAnswer();
     }
     return this.handleCorrectAnswer(timeRemaining);
   }
 
   handleCorrectAnswer(timeRemaining = this.state.timeRemaining): TapResult {
-    if (this.state.status !== 'playing') {
+    if (this.state.status !== 'playing' || this.roundAnswered) {
       return { state: this.getState(), correct: false };
     }
+    this.roundAnswered = true;
     const nextCombo = this.state.combo + 1;
     const points = this.calculateScore(nextCombo, timeRemaining);
     this.state = {
@@ -90,23 +93,53 @@ export class GameEngine {
   }
 
   handleWrongAnswer(): TapResult {
-    if (this.state.status !== 'playing') {
+    if (this.state.status !== 'playing' || this.roundAnswered) {
       return { state: this.getState(), correct: false };
     }
-    const combo = this.state.combo;
-    const highestCombo = this.state.highestCombo;
+    this.roundAnswered = true;
+    const lives = Math.max(0, this.state.lives - 1);
+    this.state = {
+      ...this.state,
+      lives,
+      combo: 0,
+      status:
+        lives === 0
+          ? this.state.revivesUsed < LIVES_CONFIG.maxRevivesPerGame
+            ? 'reviveOffer'
+            : 'gameOver'
+          : 'playing',
+    };
+    if (lives > 0)
+      return { state: this.generateRoundAtCurrentLevel(), correct: false };
+    return { state: this.getState(), correct: false };
+  }
+
+  grantRevive(): GameState {
+    if (
+      this.state.status !== 'reviveOffer' ||
+      this.state.lives !== 0 ||
+      this.state.revivesUsed >= LIVES_CONFIG.maxRevivesPerGame
+    )
+      return this.getState();
+    this.state = {
+      ...this.state,
+      status: 'playing',
+      lives: LIVES_CONFIG.reviveLives,
+      revivesUsed: this.state.revivesUsed + 1,
+    };
+    return this.generateRoundAtCurrentLevel();
+  }
+
+  getResult(): GameResult {
+    const bestScore = Math.max(this.state.bestScore, this.state.score);
     const isNewBest = this.state.score > this.state.bestScore;
-    const state = this.endGame();
+    this.state = { ...this.state, bestScore };
     return {
-      state,
-      correct: false,
-      result: {
-        score: state.score,
-        bestScore: state.bestScore,
-        combo,
-        highestCombo,
-        isNewBest,
-      },
+      score: this.state.score,
+      bestScore,
+      combo: this.state.combo,
+      highestCombo: this.state.highestCombo,
+      isNewBest,
     };
   }
 
@@ -160,6 +193,7 @@ export class GameEngine {
   }
 
   generateRound(difficulty = this.increaseDifficulty()): GameState {
+    this.roundAnswered = false;
     const targetColor = this.colors.chooseTarget(difficulty.colorCount);
     this.state = {
       ...this.state,
@@ -172,6 +206,10 @@ export class GameEngine {
       timeRemaining: difficulty.responseTimeMs,
     };
     return this.getState();
+  }
+
+  private generateRoundAtCurrentLevel(): GameState {
+    return this.generateRound(this.difficulty.forLevel(this.state.level));
   }
 
   advanceRound(): GameState {
@@ -190,6 +228,8 @@ export class GameEngine {
       timeRemaining: 0,
       gamesPlayed: this.state?.gamesPlayed ?? 0,
       highestCombo: 0,
+      lives: LIVES_CONFIG.initialLives,
+      revivesUsed: 0,
     };
   }
 }

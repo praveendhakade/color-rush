@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated } from 'react-native';
 import { GameOverScreen } from '@/src/screens/GameOverScreen';
 import { GameplayScreen } from '@/src/screens/GameplayScreen';
@@ -8,6 +8,7 @@ import { GameEngine } from '@/src/game/GameEngine';
 import type { DifficultyMode, GameResult, GameState } from '@/src/game/types';
 import { useGameTimer } from '@/src/hooks/useGameTimer';
 import { feedback } from '@/src/services/Feedback';
+import { rewardedAdService } from '@/src/services/RewardedAdService';
 import {
   DEFAULT_STORED_DATA,
   gameStorage,
@@ -25,12 +26,19 @@ export default function Index() {
   const [difficultyMode, setDifficultyMode] =
     useState<DifficultyMode>('medium');
   const [scoreScale] = useState(() => new Animated.Value(1));
+  const handledRewards = useRef(new Set<string>());
+  const rewardPending = useRef(false);
+  const timerControls = useRef<{
+    start: (durationMs: number) => void;
+    stop: () => void;
+  }>({ start: () => undefined, stop: () => undefined });
 
   useEffect(() => {
     gameStorage.load().then((data) => {
       setStored(data);
       setDifficultyMode(data.difficultyMode);
       feedback.setSoundEnabled(data.soundEnabled);
+      feedback.setHapticsEnabled(data.hapticsEnabled);
       engine.setDifficultyMode(data.difficultyMode);
       setState(engine.setBestScore(data.bestScore));
     });
@@ -54,6 +62,13 @@ export default function Index() {
     void gameStorage.save(next);
   }, [stored]);
 
+  const toggleHaptics = useCallback(() => {
+    const next = { ...stored, hapticsEnabled: !stored.hapticsEnabled };
+    setStored(next);
+    feedback.setHapticsEnabled(next.hapticsEnabled);
+    void gameStorage.save(next);
+  }, [stored]);
+
   const persistResult = useCallback(
     (result: GameState) => {
       const next = {
@@ -69,22 +84,41 @@ export default function Index() {
   );
 
   const finishGame = useCallback(() => {
-    const result = engine.handleWrongAnswer();
-    setState(result.state);
-    setGameResult(result.result ?? null);
-    persistResult(result.state);
-    feedback.haptic('wrong');
+    const result = engine.getResult();
+    const finalState = engine.endGame();
+    setState(finalState);
+    setGameResult(result);
+    persistResult(finalState);
+    feedback.haptic('gameover');
     feedback.sound('gameover');
     setScreen('gameOver');
   }, [engine, persistResult]);
+
+  const loseLife = useCallback(() => {
+    const livesBefore = engine.getState().lives;
+    const result = engine.handleWrongAnswer();
+    if (result.state.lives === livesBefore) return;
+    setState(result.state);
+    feedback.haptic('wrong');
+    feedback.sound('wrong');
+    if (result.state.status === 'playing')
+      timerControls.current.start(result.state.timeRemaining);
+    else {
+      timerControls.current.stop();
+      if (result.state.status === 'gameOver') finishGame();
+    }
+  }, [engine, finishGame]);
 
   const {
     start: startTimer,
     stop: stopTimer,
     pause: pauseTimer,
-  } = useGameTimer(finishGame, (milliseconds) =>
+  } = useGameTimer(loseLife, (milliseconds) =>
     setState(engine.setTimeRemaining(milliseconds)),
   );
+  useEffect(() => {
+    timerControls.current = { start: startTimer, stop: stopTimer };
+  }, [startTimer, stopTimer]);
 
   const startGame = useCallback(() => {
     stopTimer();
@@ -109,15 +143,19 @@ export default function Index() {
   const tapTile = useCallback(
     (tileId: string) => {
       feedback.sound('tap');
+      const livesBefore = engine.getState().lives;
       const result = engine.handleTap(tileId);
       setState(result.state);
       if (!result.correct) {
-        stopTimer();
-        persistResult(result.state);
-        setGameResult(result.result ?? null);
+        if (result.state.lives === livesBefore) return;
         feedback.haptic('wrong');
         feedback.sound('wrong');
-        setScreen('gameOver');
+        if (result.state.status === 'playing')
+          startTimer(result.state.timeRemaining);
+        else {
+          stopTimer();
+          if (result.state.status === 'gameOver') finishGame();
+        }
         return;
       }
       feedback.haptic(result.state.combo >= 5 ? 'combo' : 'correct');
@@ -136,8 +174,36 @@ export default function Index() {
       ]).start();
       startTimer(result.state.timeRemaining);
     },
-    [engine, persistResult, scoreScale, startTimer, stopTimer],
+    [engine, finishGame, scoreScale, startTimer, stopTimer],
   );
+
+  const revive = useCallback(async () => {
+    if (rewardPending.current || engine.getState().status !== 'reviveOffer')
+      return;
+    rewardPending.current = true;
+    try {
+      if (!(await rewardedAdService.isAvailable())) return;
+      const outcome = await rewardedAdService.showRewardedAd();
+      if (
+        outcome.status !== 'rewarded' ||
+        handledRewards.current.has(outcome.transactionId)
+      )
+        return;
+      handledRewards.current.add(outcome.transactionId);
+      const next = engine.grantRevive();
+      if (next.status !== 'playing') return;
+      setState(next);
+      startTimer(next.timeRemaining);
+    } finally {
+      rewardPending.current = false;
+    }
+  }, [engine, startTimer]);
+
+  const endRun = useCallback(() => {
+    if (engine.getState().status !== 'reviveOffer') return;
+    stopTimer();
+    finishGame();
+  }, [engine, finishGame, stopTimer]);
 
   const goHome = useCallback(() => {
     stopTimer();
@@ -159,8 +225,10 @@ export default function Index() {
       <SettingsScreen
         difficultyMode={difficultyMode}
         soundEnabled={stored.soundEnabled}
+        hapticsEnabled={stored.hapticsEnabled}
         onChooseDifficulty={chooseDifficulty}
         onToggleSound={toggleSound}
+        onToggleHaptics={toggleHaptics}
         onBack={() => setScreen('home')}
       />
     );
@@ -182,6 +250,8 @@ export default function Index() {
       onPause={pauseGame}
       onResume={resumeGame}
       onHome={goHome}
+      onRevive={revive}
+      onEndGame={endRun}
     />
   );
 }

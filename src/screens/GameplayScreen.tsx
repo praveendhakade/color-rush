@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Animated,
   type LayoutChangeEvent,
@@ -21,6 +21,8 @@ export const GameplayScreen = ({
   onPause,
   onResume,
   onHome,
+  onRevive,
+  onEndGame,
 }: {
   state: GameState;
   difficultyMode: DifficultyMode;
@@ -29,8 +31,27 @@ export const GameplayScreen = ({
   onPause: () => void;
   onResume: () => void;
   onHome: () => void;
+  onRevive: () => void;
+  onEndGame: () => void;
 }) => {
   const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
+  const [lifeScale] = useState(() => new Animated.Value(1));
+  useEffect(() => {
+    if (state.lives < 3) {
+      Animated.sequence([
+        Animated.timing(lifeScale, {
+          toValue: 1.25,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(lifeScale, {
+          toValue: 1,
+          duration: 130,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [lifeScale, state.lives]);
   const target = state.targetColor ? COLOR_CONFIG[state.targetColor] : null;
   const columns = Math.min(3, state.tiles.length);
   const rows = Math.ceil(state.tiles.length / columns);
@@ -70,6 +91,20 @@ export const GameplayScreen = ({
           </Animated.Text>
           <Text style={styles.level}>LEVEL {state.level}</Text>
         </View>
+        <Animated.View
+          accessibilityLabel={`${state.lives} lives remaining`}
+          accessibilityRole="text"
+          style={[styles.lives, { transform: [{ scale: lifeScale }] }]}
+        >
+          {[0, 1, 2].map((index) => (
+            <Text
+              key={index}
+              style={index < state.lives ? styles.heart : styles.lostHeart}
+            >
+              {index < state.lives ? '♥' : '♡'}
+            </Text>
+          ))}
+        </Animated.View>
         <View style={styles.pauseRow}>
           {state.combo > 0 ? (
             <Text style={styles.combo}>COMBO x{state.combo}</Text>
@@ -106,6 +141,28 @@ export const GameplayScreen = ({
           <PrimaryButton label="HOME" onPress={onHome} />
         </View>
       )}
+      {state.status === 'reviveOffer' && (
+        <View accessibilityViewIsModal style={styles.pauseOverlay}>
+          <Text style={styles.title}>DON&apos;T GIVE UP!</Text>
+          <Text style={styles.pauseScore}>OUT OF LIVES</Text>
+          <Text style={styles.reviveScore}>
+            YOUR CURRENT RUN{`\n`}SCORE: {state.score}
+          </Text>
+          <Text style={styles.adNote}>
+            {__DEV__
+              ? 'DEV-ONLY REWARDED AD SIMULATION'
+              : 'REWARDED ADS COMING SOON'}
+          </Text>
+          <PrimaryButton
+            label={
+              __DEV__ ? 'WATCH AD & CONTINUE (DEV)' : 'REWARDED ADS COMING SOON'
+            }
+            onPress={onRevive}
+            disabled={!__DEV__}
+          />
+          <PrimaryButton label="END GAME" onPress={onEndGame} />
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -140,6 +197,21 @@ const styles = StyleSheet.create({
   stats: { flexDirection: 'row', justifyContent: 'space-between' },
   score: { color: '#FFFFFF', fontSize: 23, fontWeight: '900' },
   level: { color: '#C4C1E0', fontSize: 17, fontWeight: '800' },
+  lives: { alignSelf: 'center', flexDirection: 'row', gap: 7, marginTop: 9 },
+  heart: { color: '#FB7185', fontSize: 26, fontWeight: '900' },
+  lostHeart: { color: '#6B6684', fontSize: 26, fontWeight: '900' },
+  reviveScore: {
+    color: '#FDE047',
+    fontSize: 21,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  adNote: {
+    color: '#AAA6C8',
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
   pauseRow: {
     alignItems: 'center',
     flexDirection: 'row',
