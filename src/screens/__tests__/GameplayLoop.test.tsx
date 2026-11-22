@@ -9,6 +9,10 @@ jest.mock('expo-audio', () => ({
   setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('@/src/hooks/useReducedMotion', () => ({
+  useReducedMotion: () => true,
+}));
+
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
   setItem: jest.fn().mockResolvedValue(null),
@@ -38,10 +42,35 @@ const getWrongTarget = (
   return wrongTarget;
 };
 
+const createFirstPlayer = async (view: ReturnType<typeof render>) => {
+  await waitFor(() => expect(view.getByLabelText('Player name')).toBeTruthy());
+  fireEvent.changeText(view.getByLabelText('Player name'), 'Player One');
+  fireEvent.press(view.getByLabelText('CREATE PLAYER'));
+  await waitFor(() => expect(view.getByText('COLOR RUSH')).toBeTruthy());
+};
+
 describe('complete gameplay loop', () => {
+  it('shows arcade shortcuts and switches between local player cards', async () => {
+    const view = render(<App />);
+    await createFirstPlayer(view);
+    expect(view.getByText('PERSONAL CHALLENGE')).toBeTruthy();
+    fireEvent.press(view.getByLabelText('LEADERBOARD'));
+    expect(view.getByText('It’s a clean slate!')).toBeTruthy();
+    fireEvent.press(view.getByLabelText('BACK TO ARCADE'));
+
+    fireEvent.press(view.getByLabelText('Switch player'));
+    fireEvent.press(view.getByLabelText('ADD PLAYER'));
+    fireEvent.changeText(view.getByLabelText('Player name'), 'Sam');
+    fireEvent.press(view.getByLabelText('Avatar fox'));
+    fireEvent.press(view.getByLabelText('SAVE'));
+    fireEvent.press(view.getByLabelText('Switch to Sam'));
+    expect(view.getByText('Sam')).toBeTruthy();
+    expect(view.getByLabelText('PLAY NOW')).toBeTruthy();
+  });
+
   it('moves from home through a scored game to game over, replay, and home', async () => {
     const view = render(<App />);
-    await waitFor(() => expect(view.getByText('COLOR\nRUSH')).toBeTruthy());
+    await createFirstPlayer(view);
 
     fireEvent.press(view.getByTestId('play-button'));
     const target = getTarget(view);
@@ -67,13 +96,13 @@ describe('complete gameplay loop', () => {
     }
     fireEvent.press(view.getByLabelText('END GAME'));
     fireEvent.press(view.getByLabelText('HOME'));
-    expect(view.getByText('COLOR\nRUSH')).toBeTruthy();
-    expect(view.getByLabelText('PLAY')).toBeTruthy();
+    expect(view.getByText('COLOR RUSH')).toBeTruthy();
+    expect(view.getByLabelText('PLAY NOW')).toBeTruthy();
   });
 
   it('shows lives and resumes the same run after a development reward', async () => {
     const view = render(<App />);
-    await waitFor(() => expect(view.getByText('COLOR\nRUSH')).toBeTruthy());
+    await createFirstPlayer(view);
     fireEvent.press(view.getByTestId('play-button'));
     expect(view.getByLabelText('3 lives remaining')).toBeTruthy();
     for (let life = 0; life < 3; life += 1) {
@@ -89,6 +118,7 @@ describe('complete gameplay loop', () => {
 
   it('saves difficulty and sound choices from settings', async () => {
     const view = render(<App />);
+    await createFirstPlayer(view);
     await act(async () => {
       await Promise.resolve();
     });
@@ -111,7 +141,7 @@ describe('complete gameplay loop', () => {
         .selected,
     ).toBe(true);
 
-    fireEvent.press(view.getByLabelText('BACK'));
+    fireEvent.press(view.getByLabelText('BACK TO ARCADE'));
     fireEvent.press(view.getByTestId('play-button'));
     expect(view.getByText(/TAP/)).toBeTruthy();
   });

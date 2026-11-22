@@ -53,6 +53,11 @@ export class GameEngine {
     return this.getState();
   }
 
+  loadBestScore(bestScore: number): GameState {
+    this.state = { ...this.state, bestScore };
+    return this.getState();
+  }
+
   startGame(): GameState {
     this.state = {
       ...this.createIdleState(this.state.bestScore),
