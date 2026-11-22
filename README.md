@@ -1,6 +1,8 @@
 # Color Rush
 
-Color Rush is an Android-first reaction game: tap the requested color before time runs out. The game includes three lives per run, score and combo progression, a one-time rewarded-revive offer, local best-score persistence, restart, and accessible labeled tiles. The interface supports rotation and resizable large-screen windows.
+Color Rush is an Android-first reaction game: tap the requested color before time runs out. The game includes three lives per run, score and combo progression, a one-time rewarded-revive offer, local player profiles with built-in avatars, per-player progress, a difficulty-specific device leaderboard, restart, and accessible labeled tiles. The interface supports rotation and resizable large-screen windows.
+
+Player names, avatar selections, score history, and statistics are stored locally on the device with game preferences. Existing best score and available statistics migrate to a default “Player 1” profile on upgrade. Profiles do not require an account or network connection. Local profiles can be lost if app data is cleared or the app is uninstalled; backup and restore are not currently available.
 
 ## Requirements
 
