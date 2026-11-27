@@ -41,7 +41,9 @@ describe('GameEngine', () => {
     )!;
     const first = engine.handleTap(wrong.id);
     expect(first.state.lives).toBe(2);
-    expect(first.state.status).toBe('playing');
+    expect(first.state.status).toBe('paused');
+    expect(first.state.lifeLostPause).toBe(true);
+    engine.resumeGame();
     expect(engine.handleTap(wrong.id).state.lives).toBe(2);
   });
 
@@ -52,8 +54,10 @@ describe('GameEngine', () => {
       (tile) => tile.color === state.targetColor,
     )!;
     engine.handleTap(correctTile.id, state.timeRemaining);
-    expect(engine.handleWrongAnswer().state.status).toBe('playing');
-    expect(engine.handleWrongAnswer().state.status).toBe('playing');
+    expect(engine.handleWrongAnswer().state.status).toBe('paused');
+    engine.resumeGame();
+    expect(engine.handleWrongAnswer().state.status).toBe('paused');
+    engine.resumeGame();
     const result = engine.handleWrongAnswer();
     expect(result.state.status).toBe('reviveOffer');
     expect(result.state.lives).toBe(0);
@@ -65,7 +69,9 @@ describe('GameEngine', () => {
     const engine = createEngine();
     engine.startGame();
     engine.handleWrongAnswer();
+    engine.resumeGame();
     engine.handleWrongAnswer();
+    engine.resumeGame();
     const offer = engine.handleWrongAnswer().state;
     expect(engine.setTimeRemaining(0)).toMatchObject({
       status: 'reviveOffer',
@@ -83,7 +89,9 @@ describe('GameEngine', () => {
     const level = state.level;
     const gamesPlayed = state.gamesPlayed;
     engine.handleWrongAnswer();
+    engine.resumeGame();
     engine.handleWrongAnswer();
+    engine.resumeGame();
     engine.handleWrongAnswer();
     state = engine.grantRevive();
     expect(state).toMatchObject({

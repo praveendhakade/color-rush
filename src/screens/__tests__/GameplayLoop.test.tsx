@@ -42,6 +42,15 @@ const getWrongTarget = (
   return wrongTarget;
 };
 
+const makeMistakes = (view: ReturnType<typeof render>, count: number) => {
+  for (let life = 0; life < count; life += 1) {
+    const wrongTarget = getWrongTarget(view, getTarget(view));
+    fireEvent.press(view.getAllByLabelText(`${wrongTarget} tile`)[0]!);
+    const continueButton = view.queryByLabelText('TAP TO CONTINUE');
+    if (continueButton) fireEvent.press(continueButton);
+  }
+};
+
 const createFirstPlayer = async (view: ReturnType<typeof render>) => {
   await waitFor(() => expect(view.getByLabelText('Player name')).toBeTruthy());
   fireEvent.changeText(view.getByLabelText('Player name'), 'Player One');
@@ -78,10 +87,7 @@ describe('complete gameplay loop', () => {
     expect(view.getByText('COMBO x1')).toBeTruthy();
     expect(view.getByText(/SCORE [1-9]/)).toBeTruthy();
 
-    for (let life = 0; life < 3; life += 1) {
-      const wrongTarget = getWrongTarget(view, getTarget(view));
-      fireEvent.press(view.getAllByLabelText(`${wrongTarget} tile`)[0]!);
-    }
+    makeMistakes(view, 3);
     expect(view.getByText("DON'T GIVE UP!")).toBeTruthy();
     expect(view.getByText(/SCORE:/)).toBeTruthy();
     fireEvent.press(view.getByLabelText('END GAME'));
@@ -90,10 +96,7 @@ describe('complete gameplay loop', () => {
     fireEvent.press(view.getByLabelText('PLAY AGAIN'));
     expect(view.getByText(/TAP/)).toBeTruthy();
 
-    for (let life = 0; life < 3; life += 1) {
-      const replayWrongTarget = getWrongTarget(view, getTarget(view));
-      fireEvent.press(view.getAllByLabelText(`${replayWrongTarget} tile`)[0]!);
-    }
+    makeMistakes(view, 3);
     fireEvent.press(view.getByLabelText('END GAME'));
     fireEvent.press(view.getByLabelText('HOME'));
     expect(view.getByText('COLOR RUSH')).toBeTruthy();
@@ -105,10 +108,7 @@ describe('complete gameplay loop', () => {
     await createFirstPlayer(view);
     fireEvent.press(view.getByTestId('play-button'));
     expect(view.getByLabelText('3 lives remaining')).toBeTruthy();
-    for (let life = 0; life < 3; life += 1) {
-      const wrong = getWrongTarget(view, getTarget(view));
-      fireEvent.press(view.getAllByLabelText(`${wrong} tile`)[0]!);
-    }
+    makeMistakes(view, 3);
     fireEvent.press(view.getByLabelText('WATCH AD & CONTINUE (DEV)'));
     await waitFor(() =>
       expect(view.getByLabelText('1 lives remaining')).toBeTruthy(),

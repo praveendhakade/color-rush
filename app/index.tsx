@@ -162,6 +162,7 @@ export default function Index() {
       timerControls.current.start(result.state.timeRemaining);
     else {
       timerControls.current.stop();
+      setState(result.state);
       if (result.state.status === 'gameOver') finishGame();
     }
   }, [engine, finishGame]);
@@ -216,6 +217,7 @@ export default function Index() {
           startTimer(result.state.timeRemaining);
         else {
           stopTimer();
+          setState(result.state);
           if (result.state.status === 'gameOver') finishGame();
         }
         return;
@@ -450,6 +452,7 @@ export default function Index() {
       onTap={tapTile}
       onPause={pauseGame}
       onResume={resumeGame}
+      onRestart={startGame}
       onHome={goHome}
       onRevive={revive}
       onEndGame={endRun}

@@ -2,12 +2,12 @@
   "expo": {
     "name": "Color Rush",
     "slug": "color-rush",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "userInterfaceStyle": "dark",
     "scheme": "colorrush",
     "android": {
       "package": "com.alphaprogaming24.colorrush",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": ["android.permission.VIBRATE"],
       "blockedPermissions": ["android.permission.RECORD_AUDIO"]
     },
