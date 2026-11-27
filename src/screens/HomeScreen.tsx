@@ -50,7 +50,7 @@ export const HomeScreen = ({
   const nextTarget = Math.max(100, (Math.floor(bestScore / 100) + 1) * 100);
   const challengeProgress = Math.min(1, bestScore / nextTarget);
   return (
-    <ArcadeBackground>
+    <ArcadeBackground animatedShapes>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.brandRow}>
           <View>
@@ -189,7 +189,13 @@ export const HomeScreen = ({
 };
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, gap: 16, justifyContent: 'center', padding: 22 },
+  content: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: 22,
+    paddingTop: 22,
+    paddingBottom: 14,
+  },
   brandRow: {
     alignItems: 'center',
     flexDirection: 'row',

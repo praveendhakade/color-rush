@@ -18,6 +18,7 @@ export interface TapResult {
 export class GameEngine {
   private state: GameState;
   private roundAnswered = false;
+  private scoreAtDifficultyReset = 0;
   private difficulty: DifficultyManager;
   private mode: DifficultyMode = 'medium';
 
@@ -59,6 +60,7 @@ export class GameEngine {
   }
 
   startGame(): GameState {
+    this.scoreAtDifficultyReset = 0;
     this.state = {
       ...this.createIdleState(this.state.bestScore),
       status: 'playing',
@@ -107,6 +109,7 @@ export class GameEngine {
       ...this.state,
       lives,
       combo: 0,
+      lifeLostPause: lives > 0,
       status:
         lives === 0
           ? this.state.revivesUsed < LIVES_CONFIG.maxRevivesPerGame
@@ -114,8 +117,13 @@ export class GameEngine {
             : 'gameOver'
           : 'playing',
     };
-    if (lives > 0)
-      return { state: this.generateRoundAtCurrentLevel(), correct: false };
+    if (lives > 0) {
+      this.scoreAtDifficultyReset = this.state.score;
+      this.state = { ...this.state, level: GAME_CONFIG.initialLevel };
+      this.generateRound(this.difficulty.forLevel(GAME_CONFIG.initialLevel));
+      this.state = { ...this.state, status: 'paused', lifeLostPause: true };
+      return { state: this.getState(), correct: false };
+    }
     return { state: this.getState(), correct: false };
   }
 
@@ -129,6 +137,7 @@ export class GameEngine {
     this.state = {
       ...this.state,
       status: 'playing',
+      lifeLostPause: false,
       lives: LIVES_CONFIG.reviveLives,
       revivesUsed: this.state.revivesUsed + 1,
     };
@@ -167,6 +176,7 @@ export class GameEngine {
       this.state = {
         ...this.state,
         status: 'paused',
+        lifeLostPause: false,
         timeRemaining: Math.max(0, timeRemaining),
       };
     }
@@ -175,7 +185,7 @@ export class GameEngine {
 
   resumeGame(): GameState {
     if (this.state.status === 'paused')
-      this.state = { ...this.state, status: 'playing' };
+      this.state = { ...this.state, status: 'playing', lifeLostPause: false };
     return this.getState();
   }
 
@@ -191,7 +201,9 @@ export class GameEngine {
   }
 
   increaseDifficulty(): Difficulty {
-    const level = this.difficulty.levelForScore(this.state.score);
+    const level = this.difficulty.levelForScore(
+      this.state.score - this.scoreAtDifficultyReset,
+    );
     const nextDifficulty = this.difficulty.forLevel(level);
     this.state = { ...this.state, level };
     return nextDifficulty;

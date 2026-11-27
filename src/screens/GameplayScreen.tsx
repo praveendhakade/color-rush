@@ -20,6 +20,7 @@ export const GameplayScreen = ({
   onTap,
   onPause,
   onResume,
+  onRestart,
   onHome,
   onRevive,
   onEndGame,
@@ -30,6 +31,7 @@ export const GameplayScreen = ({
   onTap: (tileId: string) => void;
   onPause: () => void;
   onResume: () => void;
+  onRestart: () => void;
   onHome: () => void;
   onRevive: () => void;
   onEndGame: () => void;
@@ -83,35 +85,29 @@ export const GameplayScreen = ({
   return (
     <SafeAreaView style={styles.page}>
       <View style={styles.game}>
-        <View style={styles.stats}>
-          <Animated.Text
-            style={[styles.score, { transform: [{ scale: scoreScale }] }]}
+        <View style={styles.headerRow}>
+          <Animated.View
+            accessibilityLabel={`${state.lives} lives remaining`}
+            accessibilityRole="text"
+            style={[styles.lives, { transform: [{ scale: lifeScale }] }]}
           >
-            SCORE {state.score}
-          </Animated.Text>
+            {[0, 1, 2].map((index) => (
+              <Text key={index} style={index < state.lives ? styles.heart : styles.lostHeart}>
+                {index < state.lives ? '\u2665' : '\u2661'}
+              </Text>
+            ))}
+          </Animated.View>
+          <Text accessibilityLabel="Pause game" accessibilityRole="button" onPress={onPause} style={styles.pauseButton}>
+            {'\u23f8'}
+          </Text>
           <Text style={styles.level}>LEVEL {state.level}</Text>
         </View>
-        <Animated.View
-          accessibilityLabel={`${state.lives} lives remaining`}
-          accessibilityRole="text"
-          style={[styles.lives, { transform: [{ scale: lifeScale }] }]}
-        >
-          {[0, 1, 2].map((index) => (
-            <Text
-              key={index}
-              style={index < state.lives ? styles.heart : styles.lostHeart}
-            >
-              {index < state.lives ? '♥' : '♡'}
-            </Text>
-          ))}
-        </Animated.View>
-        <View style={styles.pauseRow}>
-          {state.combo > 0 ? (
-            <Text style={styles.combo}>COMBO x{state.combo}</Text>
-          ) : (
-            <View />
-          )}
-          <PrimaryButton label="PAUSE" onPress={onPause} />
+        <View style={styles.scoreRow}>
+          {state.combo > 0 ? <Text style={styles.combo}>COMBO x{state.combo}</Text> : <View />}
+          <Animated.Text style={[styles.score, { transform: [{ scale: scoreScale }] }]}>
+            SCORE {state.score}
+          </Animated.Text>
+          <View />
         </View>
         <View
           accessibilityLabel={`Time remaining ${state.timeRemaining} milliseconds`}
@@ -135,10 +131,25 @@ export const GameplayScreen = ({
       </View>
       {state.status === 'paused' && (
         <View accessibilityViewIsModal style={styles.pauseOverlay}>
-          <Text style={styles.title}>PAUSED</Text>
-          <Text style={styles.pauseScore}>SCORE {state.score}</Text>
-          <PrimaryButton label="RESUME" onPress={onResume} />
-          <PrimaryButton label="HOME" onPress={onHome} />
+          {state.lifeLostPause ? (
+            <>
+              <Text style={styles.title}>DON&apos;T GIVE UP!</Text>
+              <Text style={styles.pauseScore}>
+                YOU&apos;VE GOT {state.lives} {state.lives === 1 ? 'LIFE' : 'LIVES'} LEFT
+              </Text>
+              <PrimaryButton label="TAP TO CONTINUE" onPress={onResume} />
+              <PrimaryButton label="RESTART" onPress={onRestart} />
+              <PrimaryButton label="HOME" onPress={onHome} />
+            </>
+          ) : (
+            <>
+              <Text style={styles.title}>PAUSED</Text>
+              <Text style={styles.pauseScore}>SCORE {state.score}</Text>
+              <PrimaryButton label="RESUME" onPress={onResume} />
+              <PrimaryButton label="RESTART" onPress={onRestart} />
+              <PrimaryButton label="HOME" onPress={onHome} />
+            </>
+          )}
         </View>
       )}
       {state.status === 'reviveOffer' && (
@@ -194,12 +205,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
   },
-  stats: { flexDirection: 'row', justifyContent: 'space-between' },
-  score: { color: '#FFFFFF', fontSize: 23, fontWeight: '900' },
-  level: { color: '#C4C1E0', fontSize: 17, fontWeight: '800' },
-  lives: { alignSelf: 'center', flexDirection: 'row', gap: 7, marginTop: 9 },
+  headerRow: { alignItems: 'center', flexDirection: 'row' },
+  scoreRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 8, position: 'relative' },
+  score: { color: '#FFFFFF', flex: 1, fontSize: 23, fontWeight: '900', textAlign: 'center' },
+  level: { color: '#C4C1E0', flex: 1, fontSize: 17, fontWeight: '800', textAlign: 'right' },
+  lives: { flex: 1, flexDirection: 'row', gap: 7 },
   heart: { color: '#FB7185', fontSize: 26, fontWeight: '900' },
   lostHeart: { color: '#6B6684', fontSize: 26, fontWeight: '900' },
+  pauseButton: {
+    backgroundColor: '#353052',
+    borderRadius: 22,
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '900',
+    height: 44,
+    lineHeight: 44,
+    overflow: 'hidden',
+    textAlign: 'center',
+    width: 44,
+  },
   reviveScore: {
     color: '#FDE047',
     fontSize: 21,
@@ -212,13 +236,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
-  pauseRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  combo: { color: '#FDE047', fontSize: 17, fontWeight: '900' },
+  combo: { color: '#FDE047', fontSize: 17, fontWeight: '900', left: 0, position: 'absolute' },
   timerTrack: {
     backgroundColor: '#353052',
     borderRadius: 6,

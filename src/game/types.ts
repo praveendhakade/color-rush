@@ -43,6 +43,7 @@ export interface GameState {
   highestCombo: number;
   lives: number;
   revivesUsed: number;
+  lifeLostPause?: boolean;
 }
 
 export interface GameResult {
